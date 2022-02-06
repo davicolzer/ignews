@@ -10,7 +10,7 @@ type User = {
     id: string;
   };
   data: {
-    stripe_costumer_id: string;
+    stripe_customer_id: string;
   };
 };
 
@@ -22,10 +22,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
       q.Get(q.Match(q.Index("user_by_email"), q.Casefold(session.user.email)))
     );
 
-    let costumerId = user.data.stripe_costumer_id;
+    let customerId = user.data.stripe_customer_id;
 
-    if (!costumerId) {
-      const stripeCostumer = await stripe.customers.create({
+    if (!customerId) {
+      const stripeCustomer = await stripe.customers.create({
         email: session.user.email,
         // metadata
       });
@@ -33,16 +33,16 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
       await fauna.query(
         q.Update(q.Ref(q.Collection("users"), user.ref.id), {
           data: {
-            stripe_costumer_id: stripeCostumer.id,
+            stripe_customer_id: stripeCustomer.id,
           },
         })
       );
 
-      costumerId = stripeCostumer.id;
+      customerId = stripeCustomer.id;
     }
 
     const stripeCheckoutSession = await stripe.checkout.sessions.create({
-      customer: costumerId,
+      customer: customerId,
       payment_method_types: ["card"],
       billing_address_collection: "required",
       line_items: [{ price: "price_1KMIfSGdmSSs4r3dZucmSWHd", quantity: 1 }],
